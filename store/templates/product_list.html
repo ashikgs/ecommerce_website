@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Shop - Fashion Store{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row">
+        <!-- Sidebar Filters -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="filterForm">
+                        {% if search_query %}
+                            <input type="hidden" name="search" value="{{ search_query }}">
+                        {% endif %}
+                        
+                        <!-- Categories -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Categories</label>
+                            <div class="category-list">
+                                {% for category in categories %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="category" 
+                                               value="{{ category.slug }}" id="cat{{ category.id }}"
+                                               {% if request.GET.category == category.slug %}checked{% endif %}
+                                               onchange="this.form.submit()">
+                                        <label class="form-check-label" for="cat{{ category.id }}">
+                                            {{ category.name }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Gender -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Gender</label>
+                            <select name="gender" class="form-select" onchange="this.form.submit()">
+                                <option value="">All</option>
+                                <option value="M" {% if request.GET.gender == 'M' %}selected{% endif %}>Men</option>
+                                <option value="W" {% if request.GET.gender == 'W' %}selected{% endif %}>Women</option>
+                                <option value="U" {% if request.GET.gender == 'U' %}selected{% endif %}>Unisex</option>
+                                <option value="K" {% if request.GET.gender == 'K' %}selected{% endif %}>Kids</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Price Range -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Price Range</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input type="number" name="min_price" class="form-control form-control-sm" 
+                                           placeholder="Min" value="{{ request.GET.min_price }}" onchange="this.form.submit()">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" name="max_price" class="form-control form-control-sm" 
+                                           placeholder="Max" value="{{ request.GET.max_price }}" onchange="this.form.submit()">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                        <a href="{% url 'store:product_list' %}" class="btn btn-secondary w-100 mt-2">Clear All</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <p class="mb-0">Showing {{ products.start_index }} - {{ products.end_index }} of {{ products.paginator.count }} products</p>
+                <div class="d-flex">
+                    <label class="me-2">Sort by:</label>
+                    <select class="form-select form-select-sm" id="sortSelect">
+                        <option value="">Default</option>
+                        <option value="price_asc" {% if request.GET.sort_by == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+                        <option value="price_desc" {% if request.GET.sort_by == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+                        <option value="newest" {% if request.GET.sort_by == 'newest' %}selected{% endif %}>Newest First</option>
+                        <option value="popular" {% if request.GET.sort_by == 'popular' %}selected{% endif %}>Most Popular</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row">
+                {% for product in products %}
+                    <div class="col-md-4 col-6 mb-4">
+                        <div class="card product-card h-100">
+                            <div class="position-relative">
+                                {% if product.discount_percentage > 0 %}
+                                    <span class="badge bg-danger position-absolute top-0 end-0 m-2">-{{ product.discount_percentage }}%</span>
+                                {% endif %}
+                                <a href="{{ product.get_absolute_url }}">
+                                    {% with primary_image=product.images.first %}
+                                        {% if primary_image %}
+                                            <img src="{{ primary_image.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
+                                        {% else %}
+                                            <img src="{% static 'images/placeholder.jpg' %}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
+                                        {% endif %}
+                                    {% endwith %}
+                                </a>
+                                <button class="btn btn-sm {% if product.id in wishlist_product_ids %}btn-danger{% else %}btn-outline-danger{% endif %} wishlist-btn position-absolute bottom-0 end-0 m-2" 
+                                        data-product-id="{{ product.id }}">
+                                    <i class="{% if product.id in wishlist_product_ids %}fas{% else %}far{% endif %} fa-heart"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <a href="{{ product.get_absolute_url }}" class="text-decoration-none text-dark">
+                                        {{ product.name|truncatechars:35 }}
+                                    </a>
+                                </h6>
+                                <div class="mb-2">
+                                    {% if product.discount_price %}
+                                        <span class="text-muted text-decoration-line-through">₹{{ product.price }}</span>
+                                        <span class="text-danger fw-bold">₹{{ product.discount_price }}</span>
+                                    {% else %}
+                                        <span class="fw-bold">₹{{ product.price }}</span>
+                                    {% endif %}
+                                </div>
+                                <form action="{% url 'store:add_to_cart' product.id %}" method="post" class="add-to-cart-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="btn btn-cart-blue btn-sm w-100">
+                                        <i class="fas fa-shopping-cart"></i> Add to Cart
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle"></i> No products found.
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if products.has_other_pages %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if products.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ products.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in products.paginator.page_range %}
+                            {% if products.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > products.number|add:'-3' and num < products.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if products.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ products.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.getElementById('sortSelect').addEventListener('change', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (this.value) {
+            urlParams.set('sort_by', this.value);
+        } else {
+            urlParams.delete('sort_by');
+        }
+        window.location.search = urlParams.toString();
+    });
+    
+    // Wishlist functionality
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const productId = this.dataset.productId;
+            fetch(`/wishlist/add/${productId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                }
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    window.location.href = "{% url 'store:login' %}";
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.success) {
+                    const icon = this.querySelector('i');
+                    if (data.created) {
+                        this.classList.remove('btn-outline-danger');
+                        this.classList.add('btn-danger');
+                        icon.classList.remove('far');
+                        icon.classList.add('fas');
+                        showNotification('Added to wishlist!', 'success');
+                    } else {
+                        this.classList.remove('btn-danger');
+                        this.classList.add('btn-outline-danger');
+                        icon.classList.remove('fas');
+                        icon.classList.add('far');
+                        showNotification('Already in wishlist!', 'info');
+                    }
+                    const wishlistCountEl = document.getElementById('wishlist-count');
+                    if (wishlistCountEl && data.wishlist_count !== undefined) {
+                        wishlistCountEl.innerText = data.wishlist_count;
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

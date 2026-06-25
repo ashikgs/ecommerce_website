@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Home - Fashion Store{% endblock %}
+
+{% block content %}
+<!-- Hero Slider -->
+<div id="heroSlider" class="carousel slide mb-5" data-bs-ride="carousel">
+    <div class="carousel-indicators">
+        <button type="button" data-bs-target="#heroSlider" data-bs-slide-to="0" class="active"></button>
+        <button type="button" data-bs-target="#heroSlider" data-bs-slide-to="1"></button>
+        <button type="button" data-bs-target="#heroSlider" data-bs-slide-to="2"></button>
+    </div>
+    <div class="carousel-inner">
+        <div class="carousel-item active">
+            <img src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1200&h=400&fit=crop" class="d-block w-100" alt="Summer" style="height: 400px; object-fit: cover;">
+            <div class="carousel-caption bg-dark bg-opacity-50 rounded">
+                <h1>Summer Collection</h1>
+                <a href="{% url 'store:product_list' %}" class="btn btn-primary">Shop Now</a>
+            </div>
+        </div>
+        <div class="carousel-item">
+            <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=400&fit=crop" class="d-block w-100" alt="Winter" style="height: 400px; object-fit: cover;">
+            <div class="carousel-caption bg-dark bg-opacity-50 rounded">
+                <h1>Winter Essentials</h1>
+                <a href="{% url 'store:product_list' %}" class="btn btn-primary">Shop Now</a>
+            </div>
+        </div>
+        <div class="carousel-item">
+            <img src="https://images.unsplash.com/photo-1445205170230-053b83016050?w=1200&h=400&fit=crop" class="d-block w-100" alt="Deals" style="height: 400px; object-fit: cover;">
+            <div class="carousel-caption bg-dark bg-opacity-50 rounded">
+                <h1>Exclusive Deals</h1>
+                <a href="{% url 'store:product_list' %}" class="btn btn-primary">Shop Now</a>
+            </div>
+        </div>
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#heroSlider" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#heroSlider" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+    </button>
+</div>
+
+{% if not user.is_authenticated %}
+<div class="container my-5 text-center">
+    <div class="p-5 bg-light rounded-3 border">
+        <h2 class="fw-bold mb-3">Join Fashion Store Today</h2>
+        <p class="col-lg-8 mx-auto text-muted mb-4">
+            Create an account to browse thousands of outfits, manage your wishlist, enjoy exclusive coupons, and track your orders.
+        </p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            <a href="{% url 'store:register' %}" class="btn btn-primary btn-lg px-4 gap-3">
+                <i class="fas fa-user-plus me-2"></i> Register Now
+            </a>
+            <a href="{% url 'store:login' %}" class="btn btn-outline-secondary btn-lg px-4">
+                Login
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Categories -->
+<div class="container my-5">
+    <h2 class="text-center mb-4">Shop by Category</h2>
+    <div class="row">
+        {% for category in categories %}
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card h-100 text-center">
+                    {% if category.image %}
+                        <img src="{{ category.image.url }}" class="card-img-top" style="height: 150px; object-fit: cover;">
+                    {% else %}
+                        <div class="bg-secondary" style="height: 150px;"><i class="fas fa-tshirt fa-3x text-white mt-5 d-block"></i></div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5>{{ category.name }}</h5>
+                        <a href="{% url 'store:product_list' %}?category={{ category.slug }}" class="btn btn-outline-primary btn-sm">Shop</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-center">No categories yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Featured Products -->
+<div class="container my-5">
+    <h2 class="text-center mb-4">Featured Products</h2>
+    <div class="row">
+        {% for product in featured_products %}
+            <div class="col-md-3 col-6 mb-4">
+                <div class="card product-card h-100">
+                    {% with primary_image=product.images.first %}
+                        <img src="{% if primary_image %}{{ primary_image.image.url }}{% else %}https://via.placeholder.com/300?text=No+Image{% endif %}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                    {% endwith %}
+                    <div class="card-body">
+                        <h6 class="card-title">{{ product.name|truncatechars:35 }}</h6>
+                        <div>
+                            {% if product.discount_price %}
+                                <span class="text-muted text-decoration-line-through">₹{{ product.price }}</span>
+                                <span class="text-danger fw-bold">₹{{ product.discount_price }}</span>
+                            {% else %}
+                                <span class="fw-bold">₹{{ product.price }}</span>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'store:product_detail' product.slug %}" class="btn btn-primary btn-sm w-100 mt-2">View</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-center">No featured products.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- New Arrivals -->
+<div class="container my-5">
+    <h2 class="text-center mb-4">New Arrivals</h2>
+    <div class="row">
+        {% for product in new_arrivals %}
+            <div class="col-md-3 col-6 mb-4">
+                <div class="card product-card h-100">
+                    {% with primary_image=product.images.first %}
+                        <img src="{% if primary_image %}{{ primary_image.image.url }}{% else %}https://via.placeholder.com/300?text=No+Image{% endif %}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                    {% endwith %}
+                    <div class="card-body">
+                        <h6 class="card-title">{{ product.name|truncatechars:35 }}</h6>
+                        <div>
+                            {% if product.discount_price %}
+                                <span class="text-muted text-decoration-line-through">₹{{ product.price }}</span>
+                                <span class="text-danger fw-bold">₹{{ product.discount_price }}</span>
+                            {% else %}
+                                <span class="fw-bold">₹{{ product.price }}</span>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'store:product_detail' product.slug %}" class="btn btn-outline-primary btn-sm w-100 mt-2">View</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-center">No new arrivals.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

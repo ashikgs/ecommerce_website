@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Checkout - Fashion Store{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card, .card-header, .card-body {
+        background-color: #F0EDCC !important;
+    }
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        width: fit-content;
+        background: #fff;
+        overflow: hidden;
+    }
+    .quantity-btn {
+        background: #f8f9fa;
+        border: none;
+        width: 32px;
+        height: 32px;
+        font-weight: bold;
+        color: #2f3542;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .quantity-btn:hover {
+        background: #e9ecef;
+    }
+    .quantity-input {
+        width: 40px;
+        text-align: center;
+        border: none;
+        font-weight: 600;
+        color: #2f3542;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+    .quantity-input:focus {
+        outline: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">Checkout</h1>
+    
+    <form method="post" id="checkoutForm">
+        {% csrf_token %}
+        <input type="hidden" name="quantity" value="{{ quantity }}">
+        <input type="hidden" name="size" value="{{ size }}">
+        <input type="hidden" name="color" value="{{ color }}">
+
+        <div class="row">
+            <div class="col-md-7">
+                <!-- Address Selection -->
+                <div class="card mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">Delivery Address</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if addresses %}
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Select Delivery Address</label>
+                                {% for address in addresses %}
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input address-select" type="radio" name="address_id" 
+                                               value="{{ address.id }}" id="address{{ address.id }}"
+                                               {% if address.is_default %}checked{% endif %}>
+                                        <label class="form-check-label" for="address{{ address.id }}">
+                                            <strong>{{ address.name }}</strong><br>
+                                            {{ address.address_line1 }}, 
+                                            {% if address.address_line2 %}{{ address.address_line2 }}, {% endif %}
+                                            {{ address.city }}, {{ address.state }} - {{ address.pincode }}<br>
+                                            Phone: {{ address.phone }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <hr>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="newAddressCheck" name="new_address_check" value="true">
+                                <label class="form-check-label" for="newAddressCheck">
+                                    Add New Address
+                                </label>
+                            </div>
+                        {% else %}
+                            <!-- Force new address since none exist -->
+                            <input type="hidden" id="newAddressCheck" name="new_address_check" value="true">
+                            <h6 class="mb-3">Please Add shipping Address</h6>
+                        {% endif %}
+                        
+                        <div id="newAddressForm" {% if addresses %}style="display: none;"{% endif %}>
+                            <h6 class="border-bottom pb-2">New Address Details</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Name</label>
+                                    <input type="text" name="name" class="form-control address-field" placeholder="Full Name">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Phone</label>
+                                    <input type="text" name="phone" class="form-control address-field" placeholder="10-digit number">
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Address Line 1</label>
+                                    <input type="text" name="address_line1" class="form-control address-field" placeholder="Flat, House no., Building, Company, Apartment">
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Address Line 2</label>
+                                    <input type="text" name="address_line2" class="form-control" placeholder="Area, Street, Sector, Village">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">City</label>
+                                    <input type="text" name="city" class="form-control address-field" placeholder="City">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">State</label>
+                                    <input type="text" name="state" class="form-control address-field" placeholder="State">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Pincode</label>
+                                    <input type="text" name="pincode" class="form-control address-field" placeholder="6-digit pincode">
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Landmark (Optional)</label>
+                                    <input type="text" name="landmark" class="form-control" placeholder="E.g. Near Apollo Hospital">
+                                </div>
+                                <div class="col-12 mb-3 form-check ms-3">
+                                    <input type="checkbox" name="is_default" class="form-check-input" id="is_default" value="true">
+                                    <label class="form-check-label" for="is_default">Set as default address</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-5">
+                <div class="card" id="summary-card" 
+                     data-price="{{ product.final_price }}" 
+                     data-stock="{{ product.stock }}" 
+                     data-discount-type="{{ coupon_discount_type }}" 
+                     data-discount-value="{{ coupon_discount_value }}">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">Order Summary (Single Item)</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Product Item View -->
+                        <div class="d-flex align-items-start mb-3 pb-3 border-bottom">
+                            {% with img=product.images.first %}
+                                <img src="{% if img %}{{ img.image.url }}{% else %}https://via.placeholder.com/80x106?text=No+Image{% endif %}" 
+                                     style="width: 70px; height: 93px; object-fit: cover; border-radius: 4px;" class="me-3" alt="{{ product.name }}">
+                            {% endwith %}
+                            <div style="flex: 1;">
+                                <h6 class="mb-1 fw-bold">{{ product.name }}</h6>
+                                <p class="text-muted small mb-1">Brand: {{ product.brand|default:"Fashion" }}</p>
+                                {% if size %}<p class="text-muted small mb-0">Size: <span class="badge bg-secondary">{{ size }}</span></p>{% endif %}
+                                {% if color %}<p class="text-muted small mb-0">Color: {{ color }}</p>{% endif %}
+                            </div>
+                            <div class="text-end d-flex flex-column align-items-end">
+                                <span class="fw-bold mb-2">₹{{ product.final_price }}</span>
+                                <div class="quantity-control">
+                                    <button type="button" class="quantity-btn" id="btn-decrement">-</button>
+                                    <input type="text" id="checkout-quantity-input" class="quantity-input" value="{{ quantity }}" readonly>
+                                    <button type="button" class="quantity-btn" id="btn-increment">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Subtotal:</span>
+                            <span id="subtotal-display">₹{{ subtotal }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Discount:</span>
+                            <span class="text-danger" id="discount-display">-₹{{ discount }}</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between mb-4">
+                            <strong>Total Amount:</strong>
+                            <strong class="h5" id="total-display">₹{{ total }}</strong>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-dark btn-lg py-2">
+                                <i class="fas fa-credit-card me-2"></i> Place Order & Pay
+                            </button>
+                            <a href="{% url 'store:main' %}" class="btn btn-outline-secondary btn-sm mt-2">
+                                <i class="fas fa-chevron-left me-1"></i> Continue Shopping
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const newAddressCheck = document.getElementById('newAddressCheck');
+        const newAddressForm = document.getElementById('newAddressForm');
+        const addressRadios = document.querySelectorAll('.address-select');
+        const addressFields = document.querySelectorAll('.address-field');
+
+        function toggleAddressFormState() {
+            if (!newAddressCheck) return;
+            if (newAddressCheck.checked) {
+                newAddressForm.style.display = 'block';
+                addressRadios.forEach(radio => {
+                    radio.checked = false;
+                    radio.disabled = true;
+                });
+                addressFields.forEach(field => field.required = true);
+            } else {
+                newAddressForm.style.display = 'none';
+                addressRadios.forEach(radio => radio.disabled = false);
+                addressFields.forEach(field => field.required = false);
+                
+                // If nothing is selected, default to the first radio
+                if (addressRadios.length > 0) {
+                    let anyChecked = false;
+                    addressRadios.forEach(radio => {
+                        if (radio.checked) anyChecked = true;
+                    });
+                    if (!anyChecked) addressRadios[0].checked = true;
+                }
+            }
+        }
+
+        if (newAddressCheck) {
+            newAddressCheck.addEventListener('change', toggleAddressFormState);
+            toggleAddressFormState();
+        }
+
+        // Validate on submit
+        document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+            const hasAddresses = {% if addresses %}true{% else %}false{% endif %};
+            const isNewChecked = newAddressCheck ? newAddressCheck.checked : true;
+            
+            if (hasAddresses && !isNewChecked) {
+                const checkedRadio = document.querySelector('input[name="address_id"]:checked');
+                if (!checkedRadio) {
+                    e.preventDefault();
+                    alert('Please select a delivery address or add a new one.');
+                    return;
+                }
+            }
+        });
+
+        // Quantity controls and pricing calculations
+        const btnDecrement = document.getElementById('btn-decrement');
+        const btnIncrement = document.getElementById('btn-increment');
+        const quantityInput = document.getElementById('checkout-quantity-input');
+        const hiddenQuantityInput = document.querySelector('input[name="quantity"]');
+        
+        const summaryCard = document.getElementById('summary-card');
+        const price = parseFloat(summaryCard.dataset.price);
+        const stock = parseInt(summaryCard.dataset.stock || '999');
+        const discountType = summaryCard.dataset.discountType;
+        const discountValue = parseFloat(summaryCard.dataset.discountValue || '0');
+        
+        const subtotalDisplay = document.getElementById('subtotal-display');
+        const discountDisplay = document.getElementById('discount-display');
+        const totalDisplay = document.getElementById('total-display');
+        
+        function updateTotals() {
+            let currentQty = parseInt(quantityInput.value);
+            
+            // Calculate subtotal
+            let subtotal = price * currentQty;
+            
+            // Calculate discount
+            let discount = 0;
+            if (discountType === 'percentage') {
+                discount = (subtotal * discountValue) / 100;
+            } else if (discountType === 'fixed') {
+                discount = discountValue;
+            }
+            // Discount cannot exceed subtotal
+            discount = Math.min(discount, subtotal);
+            
+            // Calculate total
+            let total = subtotal - discount;
+            
+            // Update UI
+            subtotalDisplay.innerText = `₹${subtotal.toFixed(2)}`;
+            discountDisplay.innerText = `-₹${discount.toFixed(2)}`;
+            totalDisplay.innerText = `₹${total.toFixed(2)}`;
+            
+            // Update hidden quantity input in the form
+            hiddenQuantityInput.value = currentQty;
+        }
+        
+        if (btnDecrement && btnIncrement && quantityInput) {
+            btnDecrement.addEventListener('click', function() {
+                let currentQty = parseInt(quantityInput.value);
+                if (currentQty > 1) {
+                    quantityInput.value = currentQty - 1;
+                    updateTotals();
+                }
+            });
+            
+            btnIncrement.addEventListener('click', function() {
+                let currentQty = parseInt(quantityInput.value);
+                if (currentQty < stock) {
+                    quantityInput.value = currentQty + 1;
+                    updateTotals();
+                } else {
+                    alert(`Only ${stock} items available in stock.`);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

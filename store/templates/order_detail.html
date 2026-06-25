@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order #{{ order.order_id }} - Fashion Store{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">Order Confirmation</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-check-circle fa-5x text-success"></i>
+                        <h3>Thank you for your order!</h3>
+                        <p>Order #{{ order.order_id }}</p>
+                        <p>Status: <span class="badge bg-{% if order.status == 'delivered' %}success{% elif order.status == 'cancelled' %}danger{% else %}warning{% endif %}">
+                            {{ order.get_status_display }}
+                        </span></p>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h5>Order Details</h5>
+                            <p><strong>Date:</strong> {{ order.created_at|date:"F d, Y" }}</p>
+                            <p><strong>Payment Status:</strong> 
+                                <span class="badge bg-{% if order.payment_status == 'completed' %}success{% else %}warning{% endif %}">
+                                    {{ order.get_payment_status_display }}
+                                </span>
+                            </p>
+                            <p><strong>Payment Method:</strong> Razorpay</p>
+                            {% if order.tracking_number %}
+                                <p><strong>Tracking Number:</strong> {{ order.tracking_number }}</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Shipping Address</h5>
+                            <p>
+                                <strong>{{ order.address.name }}</strong><br>
+                                {{ order.address.address_line1 }}<br>
+                                {% if order.address.address_line2 %}{{ order.address.address_line2 }}<br>{% endif %}
+                                {{ order.address.city }}, {{ order.address.state }} - {{ order.address.pincode }}<br>
+                                Phone: {{ order.address.phone }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5>Order Items</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Size</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in order.items.all %}
+                                        <tr>
+                                            <td>{{ item.product.name }}</td>
+                                            <td>{{ item.size|default:"-" }}</td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td>₹{{ item.price }}</td>
+                                            <td>₹{{ item.total_price }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
+                                        <td>₹{{ order.total_amount }}</td>
+                                    </tr>
+                                    {% if order.discount_amount > 0 %}
+                                        <tr>
+                                            <td colspan="4" class="text-end"><strong>Discount:</strong></td>
+                                            <td class="text-danger">-₹{{ order.discount_amount }}</td>
+                                        </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>Grand Total:</strong></td>
+                                        <td><strong>₹{{ order.final_amount }}</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 text-center">
+                        <a href="{% url 'store:download_invoice' order.order_id %}" class="btn btn-secondary">
+                            <i class="fas fa-download"></i> Download Invoice
+                        </a>
+                        <a href="{% url 'store:track_order' order.order_id %}" class="btn btn-info">
+                            <i class="fas fa-truck"></i> Track Order
+                        </a>
+                        {% if order.status == 'pending' or order.status == 'confirmed' %}
+                            <a href="{% url 'store:cancel_order' order.order_id %}" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?')">
+                                <i class="fas fa-times"></i> Cancel Order
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'store:home' %}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Continue Shopping
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

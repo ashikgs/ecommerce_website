@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">My Wishlist <span class="badge bg-dark rounded-pill ms-2" id="wishlist-page-count">{{ wishlist_items|length }}</span></h2>
+    
+    <div class="row" id="wishlist-items-container">
+        {% for item in wishlist_items %}
+        <div class="col-md-3 col-6 mb-4" id="wishlist-item-{{ item.product.id }}">
+            <div class="card h-100 border-0 shadow-sm" style="border-radius: 10px; overflow: hidden;">
+                {% with img=item.product.images.first %}
+                    <img src="{% if img %}{{ img.image.url }}{% else %}https://via.placeholder.com/300x400?text=No+Image{% endif %}" class="card-img-top" style="height: 250px; object-fit: cover;">
+                {% endwith %}
+                <div class="card-body">
+                    <h5 class="card-title fw-bold text-truncate" title="{{ item.product.name }}">{{ item.product.name }}</h5>
+                    <p class="text-danger fw-bold">₹{{ item.product.final_price }}</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'store:checkout_single' item.product.id %}" class="btn btn-dark btn-sm">Order Now</a>
+                        <button class="btn btn-outline-danger btn-sm remove-wishlist" data-product-id="{{ item.product.id }}">
+                            <i class="fas fa-trash me-1"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center my-5" id="empty-state">
+            <i class="fas fa-heart-broken fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Your wishlist is empty.</p>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Empty state element for JS fallback -->
+    <div class="row" id="empty-state-js" style="display: none;">
+        <div class="col-12 text-center my-5">
+            <i class="fas fa-heart-broken fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Your wishlist is empty.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.remove-wishlist').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            this.disabled = true;
+            
+            fetch(`/wishlist/remove/${productId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                this.disabled = false;
+                if (data && data.success) {
+                    // Remove the product card from the UI
+                    const card = document.getElementById(`wishlist-item-${productId}`);
+                    if (card) {
+                        card.remove();
+                    }
+                    
+                    // Update navbar badge count
+                    const wishlistCountEl = document.getElementById('wishlist-count');
+                    if (wishlistCountEl && data.wishlist_count !== undefined) {
+                        wishlistCountEl.innerText = data.wishlist_count;
+                    }
+                    
+                    // Update page-level count
+                    const pageCountEl = document.getElementById('wishlist-page-count');
+                    if (pageCountEl) {
+                        pageCountEl.innerText = data.wishlist_count;
+                    }
+                    
+                    // Show empty state if count becomes 0
+                    if (data.wishlist_count === 0) {
+                        const container = document.getElementById('wishlist-items-container');
+                        const emptyStateJs = document.getElementById('empty-state-js');
+                        if (container && emptyStateJs) {
+                            container.innerHTML = emptyStateJs.innerHTML;
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                this.disabled = false;
+                console.error('Error:', error);
+            });
+        });
+    });
+</script>
+{% endblock %}

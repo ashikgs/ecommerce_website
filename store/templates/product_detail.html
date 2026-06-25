@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} - Fashion Store{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <!-- Product Images Column -->
+        <div class="col-md-6">
+            <div class="main-image mb-3">
+                {% with primary_image=product.images.first %}
+                    {% if primary_image %}
+                        <img src="{{ primary_image.image.url }}" id="mainProductImage" class="img-fluid rounded" alt="{{ product.name }}">
+                    {% else %}
+                        <img src="{% static 'images/placeholder.jpg' %}" id="mainProductImage" class="img-fluid rounded" alt="{{ product.name }}">
+                    {% endif %}
+                {% endwith %}
+            </div>
+            {% if product.images.count > 1 %}
+            <div class="thumbnail-images d-flex gap-2">
+                {% for image in product.images.all %}
+                    <img src="{{ image.image.url }}" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;" 
+                         onclick="document.getElementById('mainProductImage').src='{{ image.image.url }}'">
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Product Details Column -->
+        <div class="col-md-6">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'store:home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'store:product_list' %}">Shop</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'store:product_list' %}?category={{ product.category.slug }}">{{ product.category.name }}</a></li>
+                    <li class="breadcrumb-item active">{{ product.name }}</li>
+                </ol>
+            </nav>
+
+            <h1 class="display-6">{{ product.name }}</h1>
+
+            <div class="mb-2">
+                <i class="fas fa-star text-warning"></i>
+                <i class="fas fa-star text-warning"></i>
+                <i class="fas fa-star text-warning"></i>
+                <i class="fas fa-star text-warning"></i>
+                <i class="fas fa-star-half-alt text-warning"></i>
+                <span class="text-muted">(4.5/5 - 120 reviews)</span>
+            </div>
+
+            <div class="price mb-3">
+                {% if product.discount_price %}
+                    <span class="display-6 text-danger fw-bold" id="unitPrice">₹{{ product.discount_price }}</span>
+                    <span class="text-muted text-decoration-line-through ms-2">₹{{ product.price }}</span>
+                    <span class="badge bg-danger ms-2">Save {{ product.discount_percentage }}%</span>
+                {% else %}
+                    <span class="display-6 fw-bold" id="unitPrice">₹{{ product.price }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Dynamic Total Amount Display -->
+            <div class="mb-3">
+                <h4>Total Amount: <span id="totalAmount" class="text-primary">₹{{ product.final_price }}</span></h4>
+            </div>
+
+            <div class="product-info mb-3">
+                <p><strong>Brand:</strong> {{ product.brand|default:"N/A" }}</p>
+                <p><strong>Material:</strong> {{ product.material|default:"N/A" }}</p>
+                <p><strong>Gender:</strong> {{ product.get_gender_display }}</p>
+                <p><strong>Availability:</strong>
+                    {% if product.stock > 0 %}
+                        <span class="text-success">In Stock ({{ product.stock }} items)</span>
+                    {% else %}
+                        <span class="text-danger">Out of Stock</span>
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="description mb-4">
+                <h5>Description</h5>
+                <p>{{ product.description|linebreaks }}</p>
+            </div>
+
+            {% if product.stock > 0 %}
+                <form method="post" action="{% url 'store:add_to_cart' product.id %}" id="addToCartForm">
+                    {% csrf_token %}
+
+                    <!-- Size Selection -->
+                    {% if product.get_sizes_list %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Size</label>
+                            <div class="d-flex gap-3">
+                                {% for size in product.get_sizes_list %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="size" value="{{ size }}" id="size_{{ size }}" required>
+                                        <label class="form-check-label" for="size_{{ size }}">
+                                            {{ size|upper }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Quantity with Working +/- Buttons -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Quantity</label>
+                        <div class="input-group" style="width: 150px;">
+                            <button type="button" class="btn btn-outline-secondary" id="decrementQty">-</button>
+                            <input type="number" name="quantity" id="quantityInput" class="form-control text-center" value="1" min="1" max="{{ product.stock }}" step="1">
+                            <button type="button" class="btn btn-outline-secondary" id="incrementQty">+</button>
+                        </div>
+                        <small class="text-muted">Max: {{ product.stock }}</small>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-cart-blue btn-lg">
+                            <i class="fas fa-shopping-cart"></i> Add to Cart
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" id="wishlistBtn">
+                            <i class="far fa-heart"></i> Add to Wishlist
+                        </button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="alert alert-warning">This product is currently out of stock.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Related Products Section -->
+    {% if related_products %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="text-center mb-4">You May Also Like</h3>
+        </div>
+        {% for rel_product in related_products %}
+            <div class="col-md-3 col-6 mb-4">
+                <div class="card product-card h-100">
+                    <a href="{{ rel_product.get_absolute_url }}">
+                        {% with primary_image=rel_product.images.first %}
+                            {% if primary_image %}
+                                <img src="{{ primary_image.image.url }}" class="card-img-top" alt="{{ rel_product.name }}" style="height: 200px; object-fit: cover;">
+                            {% else %}
+                                <img src="{% static 'images/placeholder.jpg' %}" class="card-img-top" alt="{{ rel_product.name }}" style="height: 200px; object-fit: cover;">
+                            {% endif %}
+                        {% endwith %}
+                    </a>
+                    <div class="card-body">
+                        <h6 class="card-title">{{ rel_product.name|truncatechars:35 }}</h6>
+                        <div class="mb-2">
+                            {% if rel_product.discount_price %}
+                                <span class="text-muted text-decoration-line-through">₹{{ rel_product.price }}</span>
+                                <span class="text-danger fw-bold">₹{{ rel_product.discount_price }}</span>
+                            {% else %}
+                                <span class="fw-bold">₹{{ rel_product.price }}</span>
+                            {% endif %}
+                        </div>
+                        <a href="{{ rel_product.get_absolute_url }}" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- JavaScript for Quantity Increment/Decrement and Total Amount Update -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const decrementBtn = document.getElementById('decrementQty');
+        const incrementBtn = document.getElementById('incrementQty');
+        const quantityInput = document.getElementById('quantityInput');
+        const totalAmountSpan = document.getElementById('totalAmount');
+
+        // Get the unit price from the displayed price (without ₹ symbol)
+        let unitPriceText = document.getElementById('unitPrice').innerText;
+        let unitPrice = parseFloat(unitPriceText.replace('₹', ''));
+
+        function updateTotalAmount() {
+            let qty = parseInt(quantityInput.value);
+            if (isNaN(qty)) qty = 1;
+            let total = unitPrice * qty;
+            totalAmountSpan.innerText = '₹' + total.toFixed(2);
+        }
+
+        if (decrementBtn && incrementBtn && quantityInput) {
+            const maxStock = parseInt(quantityInput.getAttribute('max')) || 999;
+
+            decrementBtn.addEventListener('click', function() {
+                let currentVal = parseInt(quantityInput.value);
+                if (currentVal > 1) {
+                    quantityInput.value = currentVal - 1;
+                    updateTotalAmount();
+                }
+            });
+
+            incrementBtn.addEventListener('click', function() {
+                let currentVal = parseInt(quantityInput.value);
+                if (currentVal < maxStock) {
+                    quantityInput.value = currentVal + 1;
+                    updateTotalAmount();
+                }
+            });
+
+            quantityInput.addEventListener('change', function() {
+                let val = parseInt(this.value);
+                if (isNaN(val)) val = 1;
+                if (val < 1) val = 1;
+                if (val > maxStock) val = maxStock;
+                this.value = val;
+                updateTotalAmount();
+            });
+        }
+
+        // Initial total amount
+        updateTotalAmount();
+
+        // Wishlist AJAX
+        const wishlistBtn = document.getElementById('wishlistBtn');
+        if (wishlistBtn) {
+            wishlistBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                fetch('{% url "store:add_to_wishlist" product.id %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        wishlistBtn.innerHTML = '<i class="fas fa-heart"></i> Added to Wishlist';
+                        wishlistBtn.disabled = true;
+                        showNotification('Added to wishlist!', 'success');
+                    } else {
+                        showNotification(data.message || 'Already in wishlist', 'info');
+                    }
+                })
+                .catch(() => showNotification('Please login to add to wishlist', 'warning'));
+            });
+        }
+    });
+
+    function showNotification(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+        alertDiv.style.zIndex = '9999';
+        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        document.body.appendChild(alertDiv);
+        setTimeout(() => alertDiv.remove(), 3000);
+    }
+</script>
+<div class="mb-3">
+    <label>Quantity</label>
+    <div class="input-group" style="width: 140px;">
+        <button class="btn btn-outline-secondary decrement-qty" type="button">-</button>
+        <input type="number" name="quantity" id="qtyInput" value="1" min="1" max="{{ product.stock }}" class="form-control text-center">
+        <button class="btn btn-outline-secondary increment-qty" type="button">+</button>
+    </div>
+    <small>Max: {{ product.stock }}</small>
+</div>
+
+<script>
+    const qtyInput = document.getElementById('qtyInput');
+    document.querySelector('.decrement-qty').addEventListener('click', () => {
+        let val = parseInt(qtyInput.value);
+        if (val > 1) qtyInput.value = val - 1;
+    });
+    document.querySelector('.increment-qty').addEventListener('click', () => {
+        let val = parseInt(qtyInput.value);
+        let max = parseInt(qtyInput.max);
+        if (val < max) qtyInput.value = val + 1;
+    });
+    qtyInput.addEventListener('change', () => {
+        let val = parseInt(qtyInput.value);
+        let max = parseInt(qtyInput.max);
+        if (isNaN(val)) val = 1;
+        if (val < 1) val = 1;
+        if (val > max) val = max;
+        qtyInput.value = val;
+    });
+</script>
+{% endblock %}

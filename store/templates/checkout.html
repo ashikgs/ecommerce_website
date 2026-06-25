@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Checkout - Fashion Store{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card, .card-header, .card-body {
+        background-color: #F0EDCC !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">Checkout</h1>
+    
+    <div class="row">
+        <div class="col-md-7">
+            <!-- Address Selection -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Delivery Address</h5>
+                </div>
+                <div class="card-body">
+                    {% if addresses %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Select Address</label>
+                            {% for address in addresses %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input address-select" type="radio" name="address_id" 
+                                           value="{{ address.id }}" id="address{{ address.id }}"
+                                           {% if address.is_default %}checked{% endif %}>
+                                    <label class="form-check-label" for="address{{ address.id }}">
+                                        <strong>{{ address.name }}</strong><br>
+                                        {{ address.address_line1 }}, 
+                                        {% if address.address_line2 %}{{ address.address_line2 }}, {% endif %}
+                                        {{ address.city }}, {{ address.state }} - {{ address.pincode }}<br>
+                                        Phone: {{ address.phone }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <hr>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="newAddressCheck">
+                            <label class="form-check-label" for="newAddressCheck">
+                                Add New Address
+                            </label>
+                        </div>
+                    {% endif %}
+                    
+                    <div id="newAddressForm" style="display: none;">
+                        <h6>New Address</h6>
+                        <form method="post" id="checkoutForm">
+                            {% csrf_token %}
+                            {{ address_form.as_p }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Order Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                    <tr>
+                                        <td>
+                                            {{ item.product.name|truncatechars:25 }}
+                                            {% if item.size %}<br><small>Size: {{ item.size }}</small>{% endif %}
+                                        </td>
+                                        <td>{{ item.quantity }}</td>
+                                        <td>₹{{ item.total_price }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span>₹{{ subtotal }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Discount:</span>
+                        <span class="text-danger">-₹{{ discount }}</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Total Amount:</strong>
+                        <strong class="h5">₹{{ total }}</strong>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" form="checkoutForm" class="btn btn-primary btn-lg">
+                            Place Order & Pay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Toggle new address form
+    document.getElementById('newAddressCheck').addEventListener('change', function() {
+        const newAddressForm = document.getElementById('newAddressForm');
+        const addressRadios = document.querySelectorAll('.address-select');
+        
+        if (this.checked) {
+            newAddressForm.style.display = 'block';
+            addressRadios.forEach(radio => radio.disabled = true);
+        } else {
+            newAddressForm.style.display = 'none';
+            addressRadios.forEach(radio => radio.disabled = false);
+        }
+    });
+    
+    // Handle form submission
+    document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        let formData = new FormData(this);
+        const newAddressCheck = document.getElementById('newAddressCheck');
+        const selectedAddress = document.querySelector('input[name="address_id"]:checked');
+        
+        if (newAddressCheck.checked) {
+            formData.append('new_address', 'true');
+        } else if (selectedAddress) {
+            formData.append('address_id', selectedAddress.value);
+        } else {
+            alert('Please select or add a delivery address');
+            return;
+        }
+        
+        this.submit();
+    });
+</script>
+{% endblock %}
+{% endblock %}

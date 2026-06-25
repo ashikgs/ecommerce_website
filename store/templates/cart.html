@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Shopping Cart - Fashion Store{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cart-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        border: none;
+        margin-bottom: 20px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    .cart-img {
+        width: 100px;
+        height: 130px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        width: fit-content;
+        background: #fff;
+        overflow: hidden;
+    }
+    .quantity-btn {
+        background: #f8f9fa;
+        border: none;
+        width: 32px;
+        height: 32px;
+        font-weight: bold;
+        color: #2f3542;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .quantity-btn:hover {
+        background: #e9ecef;
+    }
+    .quantity-input {
+        width: 40px;
+        text-align: center;
+        border: none;
+        font-weight: 600;
+        color: #2f3542;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+    .quantity-input:focus {
+        outline: none;
+    }
+    .btn-remove-item {
+        background: none;
+        border: none;
+        color: #ff4757;
+        font-size: 1.1rem;
+        transition: color 0.2s;
+        padding: 5px 10px;
+    }
+    .btn-remove-item:hover {
+        color: #ff2e44;
+    }
+    .summary-card {
+        background: #F0EDCC;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        padding: 24px;
+        color: #2f3542;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4 fw-bold">Your Shopping Cart</h2>
+
+    {% csrf_token %}
+
+    <div class="row" id="cart-container-row">
+        {% if cart_items %}
+        <!-- Cart Items List -->
+        <div class="col-lg-8" id="cart-items-column">
+            {% for item in cart_items %}
+            <div class="card cart-card p-3" id="cart-item-row-{{ item.id }}">
+                <div class="d-flex align-items-center flex-wrap">
+                    <!-- Thumbnail -->
+                    <div class="me-3">
+                        {% with img=item.product.images.first %}
+                            <img src="{% if img %}{{ img.image.url }}{% else %}https://via.placeholder.com/100x130?text=No+Image{% endif %}" class="cart-img" alt="{{ item.product.name }}">
+                        {% endwith %}
+                    </div>
+                    
+                    <!-- Details -->
+                    <div class="flex-grow-1 min-w-0 me-3">
+                        <h5 class="fw-bold mb-1 text-truncate" style="max-width: 300px;">
+                            <a href="{% url 'store:product_detail' item.product.slug %}" class="text-decoration-none text-dark">{{ item.product.name }}</a>
+                        </h5>
+                        <p class="text-muted small mb-1">Brand: {{ item.product.brand|default:"Fashion" }}</p>
+                        <div class="d-flex gap-2">
+                            {% if item.size %}<span class="badge bg-secondary">Size: {{ item.size }}</span>{% endif %}
+                            {% if item.color %}<span class="badge bg-light text-dark border">Color: {{ item.color }}</span>{% endif %}
+                        </div>
+                        <div class="mt-2 text-dark fw-bold">₹{{ item.price }} each</div>
+                    </div>
+                    
+                    <!-- Controls and Subtotal -->
+                    <div class="d-flex align-items-center justify-content-between mt-3 mt-sm-0 w-sm-100" style="gap: 20px;">
+                        <!-- Quantity selector -->
+                        <div class="quantity-control">
+                            <button type="button" class="quantity-btn" onclick="adjustQuantity('{{ item.id }}', -1)">-</button>
+                            <input type="text" id="quantity-input-{{ item.id }}" class="quantity-input" value="{{ item.quantity }}" readonly>
+                            <button type="button" class="quantity-btn" onclick="adjustQuantity('{{ item.id }}', 1)">+</button>
+                        </div>
+                        
+                        <!-- Item Total Price -->
+                        <div class="text-end" style="min-width: 90px;">
+                            <span class="fw-bold fs-5 text-dark" id="item-total-{{ item.id }}">₹{{ item.total_price }}</span>
+                        </div>
+                        
+                        <!-- Remove button -->
+                        <div>
+                            <button type="button" class="btn-remove-item" onclick="removeItem('{{ item.id }}')" title="Remove from cart">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Summary Sidebar -->
+        <div class="col-lg-4" id="cart-summary-column">
+            <div class="summary-card">
+                <h4 class="fw-bold mb-4 border-bottom pb-2">Order Summary</h4>
+                
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-muted">Subtotal</span>
+                    <span class="fw-bold text-dark" id="summary-subtotal">₹{{ subtotal }}</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-muted">Coupon Discount</span>
+                    <span class="text-danger fw-bold" id="summary-discount">-₹{{ discount }}</span>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="fw-bold fs-5">Grand Total</span>
+                    <span class="fw-bold fs-4 text-dark" id="summary-total">₹{{ total }}</span>
+                </div>
+                
+                <!-- Coupon Input Form -->
+                <div class="mb-4">
+                    <form action="{% url 'store:apply_coupon' %}" method="post">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            {{ coupon_form.code }}
+                            <button class="btn btn-dark" type="submit">Apply</button>
+                        </div>
+                    </form>
+                    {% if request.session.coupon_code %}
+                        <div class="mt-2 small text-success d-flex justify-content-between align-items-center">
+                            <span>Active coupon: <strong>{{ request.session.coupon_code }}</strong></span>
+                            <a href="{% url 'store:remove_coupon' %}" class="text-danger text-decoration-none">Remove</a>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'store:checkout' %}" class="btn btn-dark btn-lg py-2">
+                        <i class="fas fa-shopping-bag me-2"></i> Proceed to Checkout
+                    </a>
+                    <a href="{% url 'store:main' %}" class="btn btn-outline-dark btn-sm mt-1">
+                        <i class="fas fa-arrow-left me-1"></i> Continue Shopping
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Empty State View -->
+        <div class="col-12 text-center my-5 py-5" id="cart-empty-state">
+            <i class="fas fa-shopping-bag fa-4x text-muted mb-3"></i>
+            <h3 class="text-muted mb-3">Your cart is empty.</h3>
+            <a href="{% url 'store:main' %}" class="btn btn-dark px-4 py-2 mt-2">
+                <i class="fas fa-store me-2"></i> Shop Now
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Hidden empty state container for JS swapping -->
+    <div id="empty-state-template" style="display: none;">
+        <div class="col-12 text-center my-5 py-5">
+            <i class="fas fa-shopping-bag fa-4x text-muted mb-3"></i>
+            <h3 class="text-muted mb-3">Your cart is empty.</h3>
+            <a href="{% url 'store:main' %}" class="btn btn-dark px-4 py-2 mt-2">
+                <i class="fas fa-store me-2"></i> Shop Now
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Quantity & Item Removal AJAX scripts -->
+<script>
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+
+    // Function to handle quantity change (+1 or -1)
+    function adjustQuantity(itemId, delta) {
+        const quantityInput = document.getElementById(`quantity-input-${itemId}`);
+        let currentQty = parseInt(quantityInput.value);
+        let newQty = currentQty + delta;
+        
+        if (newQty < 1) {
+            // Confirm removal if quantity falls below 1
+            if (confirm("Remove this item from your cart?")) {
+                removeItem(itemId);
+            }
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('quantity', newQty);
+
+        // Fetch post to update_cart_item
+        fetch(`/cart/update/${itemId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update input text field value
+                quantityInput.value = newQty;
+                
+                // Update item price total element
+                document.getElementById(`item-total-${itemId}`).innerText = `₹${data.item_total}`;
+                
+                // Update order summary card elements
+                document.getElementById('summary-subtotal').innerText = `₹${data.subtotal}`;
+                document.getElementById('summary-discount').innerText = `-₹${data.discount}`;
+                document.getElementById('summary-total').innerText = `₹${data.total}`;
+                
+                // Update navbar badge count
+                const cartCountEl = document.getElementById('cart-count');
+                if (cartCountEl) {
+                    cartCountEl.innerText = data.cart_count;
+                }
+            } else {
+                alert(data.error || "Could not update quantity. Check stock availability.");
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Connection error. Could not update cart.");
+        });
+    }
+
+    // Function to remove item completely (AJAX)
+    function removeItem(itemId) {
+        if (!confirm("Are you sure you want to remove this item?")) return;
+
+        fetch(`/cart/remove/${itemId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fade out and remove element from DOM
+                const row = document.getElementById(`cart-item-row-${itemId}`);
+                if (row) {
+                    row.style.transition = 'opacity 0.3s ease';
+                    row.style.opacity = '0';
+                    setTimeout(() => {
+                        row.remove();
+                        
+                        // If cart is empty, swap layouts
+                        if (data.cart_count === 0) {
+                            const mainRow = document.getElementById('cart-container-row');
+                            const template = document.getElementById('empty-state-template');
+                            if (mainRow && template) {
+                                mainRow.innerHTML = template.innerHTML;
+                            }
+                        }
+                    }, 300);
+                }
+                
+                // Update order summary card elements
+                const subtotalEl = document.getElementById('summary-subtotal');
+                const discountEl = document.getElementById('summary-discount');
+                const totalEl = document.getElementById('summary-total');
+                if (subtotalEl) subtotalEl.innerText = `₹${data.subtotal}`;
+                if (discountEl) discountEl.innerText = `-₹${data.discount}`;
+                if (totalEl) totalEl.innerText = `₹${data.total}`;
+                
+                // Update navbar badge count
+                const cartCountEl = document.getElementById('cart-count');
+                if (cartCountEl) {
+                    cartCountEl.innerText = data.cart_count;
+                }
+            } else {
+                alert(data.error || "Could not remove item.");
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Connection error. Could not remove item.");
+        });
+    }
+</script>
+{% endblock %}

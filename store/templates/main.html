@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Main Store - Fashion Store{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-grid-card {
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        background: #fff;
+    }
+    .product-grid-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+    }
+    .product-img-wrapper {
+        position: relative;
+        overflow: hidden;
+        aspect-ratio: 3 / 4;
+        background: #f8f9fa;
+    }
+    .product-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+    .product-grid-card:hover .product-img {
+        transform: scale(1.08);
+    }
+    .badge-discount {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: linear-gradient(45deg, #ff416c, #ff4b2b);
+        color: #fff;
+        font-weight: bold;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        z-index: 2;
+    }
+    .btn-wishlist {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(255,255,255,0.85);
+        border: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ff4757;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        z-index: 2;
+    }
+    .btn-wishlist:hover {
+        background: #ff4757;
+        color: #fff;
+        transform: scale(1.1);
+    }
+    .btn-wishlist.active {
+        background: #ff4757;
+        color: #fff;
+    }
+    .card-meta {
+        padding: 18px;
+    }
+    .product-brand {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #9b9b9b;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+    .product-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #2f3542;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .price-container {
+        margin-bottom: 15px;
+    }
+    .price-current {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #2f3542;
+    }
+    .price-old {
+        font-size: 0.9rem;
+        text-decoration: line-through;
+        color: #a4b0be;
+        margin-left: 6px;
+    }
+    .action-row {
+        display: flex;
+        gap: 8px;
+    }
+    .btn-add-cart {
+        flex-grow: 1;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 8px 12px;
+        transition: all 0.2s ease;
+    }
+    .btn-cart-blue {
+        background-color: #0984e3 !important;
+        border: none !important;
+        color: #fff !important;
+    }
+    .btn-cart-blue:hover {
+        background-color: #076cb7 !important;
+        color: #fff !important;
+    }
+    .btn-order-now {
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 8px 12px;
+        background-color: #2ecc71 !important;
+        color: #fff !important;
+        border: none !important;
+        transition: all 0.2s ease;
+    }
+    .btn-order-now:hover {
+        background-color: #27ae60 !important;
+        color: #fff !important;
+    }
+    
+    /* Category pills */
+    .category-pills {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding-bottom: 15px;
+        margin-bottom: 30px;
+        scrollbar-width: none;
+    }
+    .category-pills::-webkit-scrollbar {
+        display: none;
+    }
+    .pill-item {
+        background: #f1f2f6;
+        color: #57606f;
+        padding: 8px 20px;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+    .pill-item:hover, .pill-item.active {
+        background: #2f3542;
+        color: #fff;
+    }
+
+    /* Custom Toast Notification */
+    #custom-toast-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 9999;
+    }
+    .custom-toast {
+        background: #2f3542;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 8px;
+        margin-top: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        animation: slideIn 0.3s ease forwards, fadeOut 0.3s ease 2.7s forwards;
+    }
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-6">
+            <h1 class="fw-bold mb-1">Catalog</h1>
+            <p class="text-muted">Explore our curated collections and premium arrivals</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <!-- Search bar -->
+            <form action="{% url 'store:main' %}" method="get" class="d-inline-block w-75">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Search product or brand..." value="{{ search_query|default:'' }}">
+                    <button class="btn btn-dark" type="submit"><i class="fas fa-search"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Filter pills -->
+    <div class="category-pills">
+        <a href="{% url 'store:main' %}" class="pill-item {% if not category_slug %}active{% endif %}">All Categories</a>
+        {% for cat in categories %}
+            <a href="{% url 'store:main' %}?category={{ cat.slug }}" class="pill-item {% if category_slug == cat.slug %}active{% endif %}">{{ cat.name }}</a>
+        {% endfor %}
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row">
+        {% for product in products %}
+            <div class="col-xl-3 col-lg-4 col-sm-6 col-12 mb-4">
+                <div class="product-grid-card">
+                    <div class="product-img-wrapper">
+                        {% with img=product.images.first %}
+                            <img src="{% if img %}{{ img.image.url }}{% else %}https://via.placeholder.com/400x533?text=No+Image{% endif %}" class="product-img" alt="{{ product.name }}">
+                        {% endwith %}
+                        
+                        <!-- Discount Badge -->
+                        {% if product.discount_price %}
+                            <div class="badge-discount">-{{ product.discount_percentage }}%</div>
+                        {% endif %}
+
+                        <!-- Wishlist button (AJAX) -->
+                        <button type="button" class="btn-wishlist" onclick="toggleWishlist(this, '{{ product.id }}')">
+                            <i class="fa-solid fa-heart"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="card-meta">
+                        <div class="product-brand">{{ product.brand|default:"Brand" }}</div>
+                        <h3 class="product-title" title="{{ product.name }}">{{ product.name }}</h3>
+                        
+                        <div class="price-container">
+                            {% if product.discount_price %}
+                                <span class="price-current">₹{{ product.discount_price }}</span>
+                                <span class="price-old">₹{{ product.price }}</span>
+                            {% else %}
+                                <span class="price-current">₹{{ product.price }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="action-row">
+                            <!-- Add to Cart (AJAX) -->
+                            <button type="button" class="btn btn-add-cart btn-cart-blue" onclick="addToCart(this, '{{ product.id }}')">
+                                <i class="fas fa-shopping-cart me-2"></i>Add to Cart
+                            </button>
+                            <!-- Order Now (Direct Checkout) -->
+                            <a href="{% url 'store:checkout_single' product.id %}" class="btn btn-order-now btn-add-cart text-center">
+                                <i class="fas fa-bolt me-1"></i> Buy Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center my-5">
+                <i class="fas fa-sad-tear fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No products found.</h4>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Custom Toast container -->
+<div id="custom-toast-container"></div>
+
+<!-- AJAX Scripts -->
+<script>
+    // Helper to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Custom toast creator
+    function showToast(message, iconClass = 'fa-check') {
+        const container = document.getElementById('custom-toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'custom-toast';
+        toast.innerHTML = `<i class="fas ${iconClass}"></i><span>${message}</span>`;
+        container.appendChild(toast);
+        
+        // Remove from DOM after animation finishes
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // Add To Cart function (AJAX)
+    function addToCart(button, productId) {
+        const csrfToken = getCookie('csrftoken');
+        const formData = new FormData();
+        formData.append('quantity', 1);
+        formData.append('size', ''); // Optional size
+
+        // Add disabled styling temporarily
+        button.disabled = true;
+        const originalContent = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+
+        fetch(`/cart/add/${productId}/?ajax=1`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+            
+            if (data.success) {
+                // Update badge count
+                const cartCountEl = document.getElementById('cart-count');
+                if (cartCountEl) {
+                    cartCountEl.innerText = data.cart_count;
+                }
+                showToast(data.message, 'fa-cart-plus');
+            } else {
+                showToast(data.message || 'Error adding item.', 'fa-times-circle');
+            }
+        })
+        .catch(error => {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+            console.error('Error:', error);
+            showToast('Failed to add item to cart.', 'fa-times-circle');
+        });
+    }
+
+    // Wishlist Toggle function (AJAX)
+    function toggleWishlist(button, productId) {
+        // Disable temporarily
+        button.disabled = true;
+
+        fetch(`/wishlist/add/${productId}/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (response.status === 401) {
+                window.location.href = "{% url 'store:login' %}";
+                return;
+            }
+            return response.json();
+        })
+        .then(data => {
+            button.disabled = false;
+            if (data && data.success) {
+                // Update wishlist badge count
+                const wishlistCountEl = document.getElementById('wishlist-count');
+                if (wishlistCountEl) {
+                    wishlistCountEl.innerText = data.wishlist_count;
+                }
+                
+                // Toggle active style
+                if (data.created) {
+                    button.classList.add('active');
+                    showToast('Item added to wishlist!', 'fa-heart');
+                } else {
+                    button.classList.remove('active');
+                    showToast('Already in your wishlist!', 'fa-heart');
+                }
+            }
+        })
+        .catch(error => {
+            button.disabled = false;
+            console.error('Error:', error);
+            showToast('Could not complete wishlist action.', 'fa-times-circle');
+        });
+    }
+</script>
+{% endblock %}

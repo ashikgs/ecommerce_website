@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Fashion Store{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #ACC7B4; }
+        .product-card { transition: transform 0.3s; background-color: #ffffff; }
+        .product-card:hover { transform: translateY(-5px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .card, .product-card, .product-grid-card, .cart-card, .summary-card {
+            border-radius: 20px !important;
+            overflow: hidden !important;
+        }
+
+        :root {
+            --primary-pink: #E84393;
+            --primary-pink-hover: #c72c7b;
+            --primary-pink-light: #ffebf3;
+        }
+        /* Custom blue button for Add to Cart */
+        .btn-cart-blue {
+            background-color: #0984e3 !important;
+            border-color: #0984e3 !important;
+            color: #fff !important;
+        }
+        .btn-cart-blue:hover, .btn-cart-blue:focus, .btn-cart-blue:active, .btn-cart-blue.active {
+            background-color: #076cb7 !important;
+            border-color: #076cb7 !important;
+            color: #fff !important;
+        }
+        /* Override primary button */
+        .btn-primary {
+            background-color: var(--primary-pink) !important;
+            border-color: var(--primary-pink) !important;
+            color: #fff !important;
+        }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary.active {
+            background-color: var(--primary-pink-hover) !important;
+            border-color: var(--primary-pink-hover) !important;
+            color: #fff !important;
+            box-shadow: 0 0 0 0.25rem rgba(232, 67, 147, 0.25) !important;
+        }
+        /* Override outline primary button */
+        .btn-outline-primary {
+            color: var(--primary-pink) !important;
+            border-color: var(--primary-pink) !important;
+        }
+        .btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active, .btn-outline-primary.active {
+            background-color: var(--primary-pink) !important;
+            border-color: var(--primary-pink) !important;
+            color: #fff !important;
+            box-shadow: 0 0 0 0.25rem rgba(232, 67, 147, 0.25) !important;
+        }
+        /* Override check/radio and input focus ring to match pink theme */
+        .form-check-input:checked {
+            background-color: var(--primary-pink) !important;
+            border-color: var(--primary-pink) !important;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-pink) !important;
+            box-shadow: 0 0 0 0.25rem rgba(232, 67, 147, 0.25) !important;
+        }
+        /* Override other primary utilities */
+        .text-primary {
+            color: var(--primary-pink) !important;
+        }
+        .bg-primary {
+            background-color: var(--primary-pink) !important;
+        }
+        .border-primary {
+            border-color: var(--primary-pink) !important;
+        }
+        /* Override pagination links and active states */
+        .page-item.active .page-link {
+            background-color: var(--primary-pink) !important;
+            border-color: var(--primary-pink) !important;
+            color: #fff !important;
+        }
+        .page-link {
+            color: var(--primary-pink) !important;
+        }
+        .page-link:hover {
+            color: var(--primary-pink-hover) !important;
+            background-color: var(--primary-pink-light) !important;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            {% if user.is_authenticated %}
+                <a class="navbar-brand" href="{% url 'store:main' %}">Fashion Store</a>
+            {% else %}
+                <a class="navbar-brand" href="{% url 'store:home' %}">Fashion Store</a>
+            {% endif %}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'store:home' %}">Home</a></li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'store:main' %}">Catalog</a></li>
+                    {% endif %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'store:product_list' %}">Shop</a></li>
+                </ul>
+                <form class="d-flex me-3" action="{% url 'store:product_list' %}" method="get">
+                    <input class="form-control me-2" type="search" name="search" placeholder="Search">
+                    <button class="btn btn-outline-light" type="submit"><i class="fas fa-search"></i></button>
+                </form>
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'store:wishlist' %}"><i class="fas fa-heart"></i> <span id="wishlist-count">{{ wishlist_count|default:0 }}</span></a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'store:cart_view' %}"><i class="fas fa-shopping-cart"></i> <span id="cart-count">{{ cart_count|default:0 }}</span></a></li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">{{ user.username }}</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'store:profile' %}">Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'store:my_orders' %}">Orders</a></li>
+                                <li><a class="dropdown-item" href="{% url 'store:address_list' %}">Addresses</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'store:logout' %}">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'store:login' %}">Login</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'store:register' %}">Register</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main>{% block content %}{% endblock %}</main>
+
+    <footer class="bg-dark text-light mt-5 py-4 text-center">
+        <p>&copy; 2024 Fashion Store</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
